@@ -19,15 +19,16 @@ class TracksCsvFile {
     this.playlist = playlist
     this.trackItems = trackItems
     this.columnNames = [
-      "Added By",
-      "Added At"
+      "Added At",
+      "Playlist Name"
     ]
 
     this.lineData = new Map()
     this.lineTrackUris = trackItems.map((i: any) => i.track.uri)
+    this.playlist.name = playlist.name
     this.lineTrackData = trackItems.map((i: any) => [
-      i.added_by == null ? '' : i.added_by.uri,
-      i.added_at
+      i.added_at,
+      playlist.name
     ])
   }
 
