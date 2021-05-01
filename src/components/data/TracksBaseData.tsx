@@ -26,15 +26,28 @@ class TracksBaseData extends TracksData {
     await this.getPlaylistItems()
 
     return new Map(this.playlistItems.map(item => {
-      return [
+
+      if (item.track.name.includes(' - ')) {
+        return [
+          item.track.uri,
+          [
+            item.track.artists.map((a: any) => { return String(a.name).replace(/,/g, "\\,") }).join(', ').replace(/, /g, ' and '),
+            item.track.name.replace(/ - /g, ' (') + ')'
+          ]
+        ]
+      } 
+      
+      else return [
         item.track.uri,
         [
-          item.track.artists.map((a: any) => { return String(a.name).replace(/,/g, "\\,") }).join(', '),
+          item.track.artists.map((a: any) => { return String(a.name).replace(/,/g, "\\,") }).join(', ').replace(/, /g, ' and '),
           item.track.name
         ]
       ]
     }))
   }
+  
+
 
   // Memoization supporting multiple calls
   private playlistItems: any[] = []
@@ -57,6 +70,7 @@ class TracksBaseData extends TracksData {
       return response.data.items.filter((i: any) => i.track) // Exclude null track attributes
     })
   }
+
 }
 
 export default TracksBaseData

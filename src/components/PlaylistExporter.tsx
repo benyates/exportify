@@ -5,8 +5,9 @@ import TracksBaseData from "components/data/TracksBaseData"
 import TracksArtistsData from "components/data/TracksArtistsData"
 import TracksAudioFeaturesData from "components/data/TracksAudioFeaturesData"
 import TracksAlbumData from "components/data/TracksAlbumData"
+import { data } from "msw/lib/types/context"
 
-class TracksCsvFile {
+class TracksCsvFileNew {
   playlist: any
   trackItems: any
   columnNames: string[]
@@ -19,16 +20,17 @@ class TracksCsvFile {
     this.playlist = playlist
     this.trackItems = trackItems
     this.columnNames = [
-      "Added At",
-      "Playlist Name"
+      "Playlist Name",
+      "Command"
+  
     ]
 
     this.lineData = new Map()
     this.lineTrackUris = trackItems.map((i: any) => i.track.uri)
     this.playlist.name = playlist.name
     this.lineTrackData = trackItems.map((i: any) => [
-      i.added_at,
-      playlist.name
+      playlist.name,
+      'ADD',
     ])
   }
 
@@ -67,7 +69,78 @@ class TracksCsvFile {
   sanitize(string: string): string {
     return '"' + String(string).replace(/"/g, '""') + '"'
   }
+
+  
 }
+
+class TracksCsvFile {
+  playlist: any
+  trackItems: any
+  columnNames: string[]
+  lineData: Map<string, string[]>
+
+  lineTrackUris: string[]
+  lineTrackData: string[][]
+
+  constructor(playlist: any, trackItems: any) {
+    this.playlist = playlist
+    this.trackItems = trackItems
+    this.columnNames = [
+      "Playlist Name",
+      "Command",
+      "Added At"
+  
+    ]
+
+    this.lineData = new Map()
+    this.lineTrackUris = trackItems.map((i: any) => i.track.uri)
+    this.playlist.name = playlist.name
+    this.lineTrackData = trackItems.map((i: any) => [
+      playlist.name,
+      'ADD',
+      i.added_at,
+    ])
+  }
+
+  async addData(tracksData: TracksData, before = false) {
+    if (before) {
+      this.columnNames.unshift(...tracksData.dataLabels())
+    } else {
+      this.columnNames.push(...tracksData.dataLabels())
+    }
+
+    const data: Map<string, string[]> = await tracksData.data()
+
+    this.lineTrackUris.forEach((uri: string, index: number) => {
+      if (data.has(uri)) {
+        if (before) {
+          this.lineTrackData[index].unshift(...data.get(uri)!)
+        } else {
+          this.lineTrackData[index].push(...data.get(uri)!)
+        }
+      }
+    })
+  }
+
+  content(): string {
+    let csvContent = ''
+
+    csvContent += this.columnNames.map(this.sanitize).join() + "\n"
+
+    this.lineTrackData.forEach((lineTrackData, trackId) => {
+      csvContent += lineTrackData.map(this.sanitize).join(",") + "\n"
+    })
+
+    return csvContent
+  }
+
+  sanitize(string: string): string {
+    return '"' + String(string).replace(/"/g, '""') + '"'
+  }
+
+
+}
+
 
 // Handles exporting a single playlist as a CSV file
 class PlaylistExporter {
@@ -93,9 +166,11 @@ class PlaylistExporter {
     const items = await tracksBaseData.trackItems()
     const tracks = items.map(i => i.track)
     const tracksCsvFile = new TracksCsvFile(this.playlist, items)
+    
+    // can I get this const and use it in the functionality below?
 
     // Add base data before existing (item) data, for backward compatibility
-    await tracksCsvFile.addData(tracksBaseData, true)
+    await tracksCsvFile.addData(tracksBaseData, true) 
 
     if (this.config.includeArtistsData) {
       await tracksCsvFile.addData(new TracksArtistsData(this.accessToken, tracks))
@@ -110,6 +185,7 @@ class PlaylistExporter {
     }
 
     return tracksCsvFile.content()
+
   }
 
   fileName(): string {
