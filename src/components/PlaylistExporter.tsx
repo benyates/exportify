@@ -5,9 +5,8 @@ import TracksBaseData from "components/data/TracksBaseData"
 import TracksArtistsData from "components/data/TracksArtistsData"
 import TracksAudioFeaturesData from "components/data/TracksAudioFeaturesData"
 import TracksAlbumData from "components/data/TracksAlbumData"
-import { data } from "msw/lib/types/context"
 
-class TracksCsvFileNew {
+class TracksCsvFile {
   playlist: any
   trackItems: any
   columnNames: string[]
@@ -21,7 +20,8 @@ class TracksCsvFileNew {
     this.trackItems = trackItems
     this.columnNames = [
       "Playlist Name",
-      "Command"
+      "Command",
+      "Added At"
   
     ]
 
@@ -31,6 +31,7 @@ class TracksCsvFileNew {
     this.lineTrackData = trackItems.map((i: any) => [
       playlist.name,
       'ADD',
+      i.added_at,
     ])
   }
 
@@ -70,10 +71,10 @@ class TracksCsvFileNew {
     return '"' + String(string).replace(/"/g, '""') + '"'
   }
 
-  
+
 }
 
-class TracksCsvFile {
+class TracksCsvFileNew {
   playlist: any
   trackItems: any
   columnNames: string[]
@@ -166,11 +167,10 @@ class PlaylistExporter {
     const items = await tracksBaseData.trackItems()
     const tracks = items.map(i => i.track)
     const tracksCsvFile = new TracksCsvFile(this.playlist, items)
-    
-    // can I get this const and use it in the functionality below?
+    const tracksCsvFileNew = new TracksCsvFileNew(this.playlist, items)
 
     // Add base data before existing (item) data, for backward compatibility
-    await tracksCsvFile.addData(tracksBaseData, true) 
+    await tracksCsvFile.addData(tracksBaseData, true)
 
     if (this.config.includeArtistsData) {
       await tracksCsvFile.addData(new TracksArtistsData(this.accessToken, tracks))
@@ -184,9 +184,13 @@ class PlaylistExporter {
       await tracksCsvFile.addData(new TracksAlbumData(this.accessToken, tracks))
     }
 
+    if (this.config.includeAlbumData) {
+      return tracksCsvFileNew.content().concat(tracksCsvFile.content())
+    }
     return tracksCsvFile.content()
 
   }
+
 
   fileName(): string {
     return this.playlist.name.replace(/[\x00-\x1F\x7F/\\<>:;"|=,.?*[\] ]+/g, "_").toLowerCase() + ".csv" // eslint-disable-line no-control-regex
