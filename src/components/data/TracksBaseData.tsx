@@ -28,6 +28,18 @@ class TracksBaseData extends TracksData {
     return new Map(this.playlistItems.map(item => {
       // I added an if statement here to ask whether the titles and artists have certain conditions, and then replace them with favourable values
       
+      if (item.track.name.includes('(feat.' && 'Remix')) {
+        return [
+          item.track.uri,
+          [
+            // The below line is where I do the artist and title formatting
+            item.track.artists.map((a: any) => { return String(a.name).replace(/,/g, "\\,") }).join(', ').split(',')[0],
+            item.track.name.replace(/ - /g, ' (') + ')'
+          ]
+        ]
+      } 
+
+
       if (item.track.name.includes("Mix)")) {
         return [
           item.track.uri,
